@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Una galaxia de amor para ti</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: Georgia, "Times New Roman", serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  canvas:active { cursor: grabbing; }
+
+  #intro { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(35,20,70,.55), rgba(0,0,0,.85)); transition: opacity 1.6s ease; z-index: 5; }
+  #intro.fuera { opacity: 0; pointer-events: none; }
+  .card { width: min(86vw, 380px); padding: 38px 28px 30px; text-align: center; color: #f3ebff;
+    border-radius: 22px; background: linear-gradient(160deg, rgba(80,55,130,.5), rgba(25,15,50,.72));
+    border: 1px solid rgba(200,170,255,.25); box-shadow: 0 0 60px rgba(170,130,255,.25), inset 0 0 30px rgba(190,150,255,.08);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .corazon { font-size: 40px; color: #c9a8ff; text-shadow: 0 0 18px #b28cff; animation: latido 1.3s infinite; }
+  .card h1 { font-size: clamp(26px, 6.5vw, 34px); line-height: 1.15; margin: 14px 0 14px; font-weight: 700; letter-spacing: .5px; }
+  .sub { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #d9c9ff; margin: 0 0 26px; }
+  button { font-family: inherit; }
+  #entrar { cursor: pointer; border: 0; padding: 13px 26px; border-radius: 999px; font-size: 13px; letter-spacing: 1.5px; color: #fff;
+    background: linear-gradient(90deg, #a98bf0, #e9a0c6); box-shadow: 0 0 24px rgba(170,130,255,.45); transition: transform .2s; }
+  #entrar:hover { transform: scale(1.05); }
+  @keyframes latido { 0%,100% { transform: scale(1); } 15% { transform: scale(1.22); } 30% { transform: scale(1); } 45% { transform: scale(1.14); } }
+
+  #hud { position: fixed; left: 0; right: 0; top: 0; text-align: center; padding-top: calc(18px + env(safe-area-inset-top, 0px)); color: #e8dcff; pointer-events: none;
+    opacity: 0; transition: opacity 2s ease 1.5s; z-index: 3; }
+  #hud.ver { opacity: 1; }
+  #titulo { font-size: clamp(15px, 3.6vw, 20px); letter-spacing: 2px; text-shadow: 0 0 14px #b28cff; }
+  #pie { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); text-align: center; color: #e2d4ff;
+    opacity: 0; transition: opacity 2s ease 2.5s; pointer-events: none; z-index: 3; text-shadow: 0 0 10px #b28cff; }
+  #pie.ver { opacity: .95; }
+  #pieTitulo { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+  #cont { display: flex; justify-content: center; gap: clamp(6px, 2.4vw, 14px); }
+  #cont div { min-width: 44px; padding: 6px 8px 5px; border-radius: 10px; background: rgba(40,25,80,.5); border: 1px solid rgba(200,170,255,.28); }
+  #cont b { display: block; font-size: clamp(18px, 5vw, 24px); font-weight: 700; color: #fbf6ff; font-variant-numeric: tabular-nums; }
+  #cont span { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+  #enlaceCancion { position: fixed; right: 14px; top: calc(14px + env(safe-area-inset-top, 0px)); width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid rgba(200,170,255,.4); background: rgba(40,25,80,.6); color: #d9c9ff; font-size: 16px; text-decoration: none;
+    display: none; align-items: center; justify-content: center; z-index: 4; }
+
+  #pregunta { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -40%); width: min(84vw, 340px); padding: 24px 20px; text-align: center; color: #f3ebff;
+    border-radius: 20px; background: linear-gradient(160deg, rgba(80,55,130,.8), rgba(25,15,50,.9)); border: 1px solid rgba(200,170,255,.3);
+    box-shadow: 0 0 50px rgba(170,130,255,.3); opacity: 0; pointer-events: none; transition: opacity 1.2s ease, transform 1.2s ease; z-index: 7; }
+  #pregunta.ver { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%); }
+  .pq { font-size: 19px; margin-bottom: 18px; }
+  .pb { display: flex; gap: 14px; justify-content: center; height: 44px; position: relative; }
+  .pb button { padding: 11px 24px; border: 0; border-radius: 999px; font-size: 14px; color: #fff; cursor: pointer; }
+  #si { background: linear-gradient(90deg, #a98bf0, #e9a0c6); box-shadow: 0 0 18px rgba(170,130,255,.5); }
+  #no { background: rgba(200,170,255,.25); transition: transform .25s; }
+  #resp { margin-top: 12px; font-size: 15px; min-height: 20px; color: #e8dcff; }
+  #foto { position: fixed; left: 50%; bottom: 56px; transform: translate(-50%, 30px); width: min(78vw, 300px); padding: 12px 12px 14px;
+    text-align: center; color: #f3ebff; font-size: 13px; line-height: 1.4; border-radius: 16px;
+    background: linear-gradient(160deg, rgba(80,55,130,.7), rgba(25,15,50,.85)); border: 1px solid rgba(200,170,255,.3);
+    box-shadow: 0 0 40px rgba(170,130,255,.3); opacity: 0; pointer-events: none; transition: opacity 1.2s ease, transform 1.2s ease; z-index: 4; }
+  #foto.ver { opacity: 1; transform: translate(-50%, 0); }
+  #foto img { width: 100%; max-height: 38vh; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 10px; }
+
+  #musica { position: fixed; right: 14px; top: calc(14px + env(safe-area-inset-top, 0px)); width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(200,170,255,.4);
+    background: rgba(40,25,80,.6); color: #d9c9ff; font-size: 16px; cursor: pointer; display: none; z-index: 6; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="intro">
+  <div class="card">
+    <div class="corazon">♥</div>
+    <h1>Una galaxia<br>de amor para ti</h1>
+    <p class="sub" id="sub"></p>
+    <p class="sub" style="letter-spacing:1px;text-transform:none;font-style:italic;font-size:13px;margin-bottom:22px">Un mensaje secreto, hecho solo para ti</p>
+    <button id="entrar">Entrar a nuestro universo ♥</button>
+  </div>
+</div>
+
+<div id="hud"><div id="titulo">Una galaxia de amor para ti</div></div>
+<div id="pie">
+  <div id="pieTitulo">Llevamos juntas</div>
+  <div id="cont">
+    <div><b id="cMes">0</b><span>meses</span></div>
+    <div><b id="cDia">0</b><span>días</span></div>
+    <div><b id="cHor">00</b><span>horas</span></div>
+    <div><b id="cMin">00</b><span>min</span></div>
+    <div><b id="cSeg">00</b><span>seg</span></div>
+  </div>
+</div>
+<div id="pregunta"><div class="pq">¿Sigues eligiéndome, tomatito?</div><div class="pb"><button id="si">Sí ♥</button><button id="no">No</button></div><div id="resp"></div></div>
+<div id="foto"><img alt=""><div></div></div>
+<button id="musica" title="Música">♪</button>
+<a id="enlaceCancion" href="#" target="_blank" rel="noopener" title="Nuestra canción">♪</a>
+
+<script>
+// =====================================================
+//  PERSONALIZA AQUÍ (todo es opcional)
+// =====================================================
+const NOMBRE = "tomatito";    // Nombre con el que sale en la tarjeta de bienvenida
+const FECHA_INICIO = "2026-09-12T21:00:00-06:00";  // 12 de septiembre, 9:00 pm (hora de México)
+const ZONA_HORARIA = -6;      // UTC-6 (México)
+const MUSICA = "/_blob/ca3a0c8fc7f4972cb6e879e785fe717e";            // Ej: "luna.mp3" (el archivo debe estar en la misma carpeta que este archivo)
+const ENLACE_CANCION = "";  // botón ♪ que abre la canción
+const FOTOS = [];             // Ej: ["foto1.jpg", "foto2.jpg"]  (en la misma carpeta que este archivo)
+
+const TEXTO_ANILLO_1 = "FELIZ 2 MESES ♥ TE AMO ♥ ERES MI PERSONA FAVORITA ♥ MI NIÑA BONITA ♥ ";
+const TEXTO_ANILLO_2 = "NUESTRO UNIVERSO ♥ DOS MESES DE NOSOTRAS ♥ MI TOMATITO ♥ TE AMO MUCHÍSIMO ♥ ";
+
+// ====== MENSAJES ======
+const MENSAJES = [
+"No sabes cuánto quisiera tenerte cerquita ahorita.",
+"A veces me quedo pensando en lo bonito que es tenerte en mi vida.",
+"Quisiera poder abrazarte cada vez que tengas un día difícil.",
+"Me haces feliz hasta cuando hablamos de puras tonterías.",
+"No sé cómo explicarte lo mucho que te amo, pero de verdad es muchísimo.",
+"Me gustaría que pudieras ver lo bonita que eres para mí.",
+"Si supieras cuántas veces me haces sonreír sin darte cuenta.",
+"Ojalá pudiera llenarte de besitos todos los días.",
+"Me gusta escucharte hablar, aunque no sepa ni de qué estamos hablando.",
+"No cambiaría por nada esos ratitos que paso contigo.",
+"A veces quisiera estar ahí solamente para hacerte compañía.",
+"Espero que nunca pienses que tienes que guardarte lo que sientes conmigo.",
+"Me gusta que seas tú la persona con la que comparto mis días.",
+"No tienes idea de lo mucho que me haces falta.",
+"Quiero que algún día podamos hacer todas esas cositas que tanto imaginamos.",
+"Me haces sentir demasiadas cosas bonitas, tontita.",
+"Me gustaría poder cuidarte un poquito cuando el mundo se te haga pesado.",
+"Nunca me voy a cansar de escuchar cómo estuvo tu día.",
+"Me gusta cuando me cuentas hasta las cosas más pequeñas.",
+"Qué ganas de tenerte aquí y no tener que despedirme por una pantalla.",
+"No sé qué hice para coincidir contigo, pero qué bueno que pasó.",
+"Me gustaría que nunca sintieras que tienes que cambiar algo de ti para que te quiera.",
+"A veces me dan ganas de presumirte con todo el mundo.",
+"Me gusta muchísimo ser tu novia.",
+"Quiero seguir descubriendo cositas de ti que todavía no conozco.",
+"Si hoy fue pesado para ti, ojalá mañana sea un poquito más amable.",
+"Me pone feliz saber que puedo compartir mi cariño contigo.",
+"Quisiera darte todos esos abrazos que nos debemos.",
+"No sabes cuánto me gustaría verte y quedarme un ratito contigo.",
+"Eres esa personita de la que podría hablar durante horas.",
+"Me gusta imaginar cómo sería un día normal contigo.",
+"Quisiera que nunca sintieras que tus problemas son una carga para mí.",
+"Me encanta cuando te emocionas contándome algo.",
+"Aunque tengamos días difíciles, sigo teniendo muchas ganas de nosotros.",
+"Me gusta quererte, incluso en las cosas más simples.",
+"Ojalá hoy hayas podido descansar tantito, te lo mereces.",
+"Quiero que tengas muchos motivos para estar orgullosa de ti.",
+"Me gustaría ser parte de muchos de tus días bonitos.",
+"No sabes las ganas que tengo de darte un abrazo de esos que duran muchísimo.",
+"A veces quisiera meterme a tu pantalla y darte un besito en la frente.",
+"Me haces querer ser más detallista contigo.",
+"Quiero que sepas que no tienes que estar bien todo el tiempo.",
+"Me gusta cuando me muestras esa parte de ti que no le enseñas a cualquiera.",
+"No importa si hoy no tienes mucho que contarme, igual quiero hablar contigo.",
+"Me haces sentir muy afortunada de tenerte.",
+"Quisiera que pudieras descansar de todo lo que te preocupa, aunque sea un ratito.",
+"Me gusta pensar en nuestro futuro, pero también disfruto muchísimo tenerte ahora.",
+"Te escogería hasta para hacer las cosas más aburridas.",
+"No sabes cuánto quiero que algún día la distancia deje de ser parte de nuestra historia.",
+"Me gusta hasta cuando te pones toda tontita.",
+"Quiero que tengas una vida llena de cosas que te hagan feliz.",
+"Me gustaría estar contigo en esos días en los que ni tú sabes qué necesitas.",
+"Gracias por dejarme conocer tantas partes de ti.",
+"A veces me quedo leyendo nuestros mensajes porque simplemente te extraño.",
+"Quiero aprender a quererte de la manera en la que mereces.",
+"No tienes que tener un día bonito para que yo quiera saber de ti.",
+"Me hace ilusión pensar en todas las primeras veces que todavía nos faltan.",
+"Quisiera poder verte dormir y saber que por fin estás descansando.",
+"Me gusta que seas mi niña, mi tomatito y mi persona favorita.",
+"No sabes lo bonito que se siente que seas tú.",
+"Me gustaría que nunca sintieras que tienes que competir por mi atención.",
+"Quiero que siempre tengas tiempo para ti y para todas esas cosas que te hacen feliz.",
+"Me haces falta incluso cuando acabamos de despedirnos.",
+"Si pudiera pedir algo, sería tener más momentos contigo.",
+"Me gusta cuando me cuentas tus sueños, hasta los más locos.",
+"Ojalá pudiera hacerte sentir aunque sea un poquito de todo el amor que te tengo.",
+"No quiero que sientas que debes poder con todo tú solita.",
+"Me encanta que podamos compartir hasta nuestros días más aburridos.",
+"Quisiera que un día te dieras cuenta de lo mucho que te admiro.",
+"Me pone feliz imaginarte cumpliendo todo lo que te propones.",
+"Te amo en mis días buenos, pero también quiero aprender a acompañarte en los complicados.",
+"A veces no sé qué decirte, pero nunca significa que no me importe.",
+"Me gustaría que pudiéramos quedarnos abrazadas sin preocuparnos por la hora.",
+"No cambiaría nuestras conversaciones por nada.",
+"Quiero seguir haciendo recuerdos contigo, incluso de las cosas más simples.",
+"Me encanta cuando me haces parte de tu mundo.",
+"Espero que nunca dejes de hacer las cosas que te gustan por miedo a no ser suficiente.",
+"Me gustaría poder quitarte un poquito del cansancio que llevas encima.",
+"Eres mi niña bonita y no me canso de decírtelo.",
+"Qué ganas de vivir contigo esos momentos que tantas veces hemos imaginado.",
+"Me gusta que podamos aprender juntas, incluso cuando no todo sale como esperamos.",
+"Quiero que sepas que estoy enamorada de ti, no solamente de los días bonitos.",
+"Me da mucha ternura pensar en todas las veces que todavía voy a poder hacerte sonreír.",
+"Me gustaría conocerte en todas tus etapas y seguir encontrando motivos para quererte.",
+"No tienes que ser diferente para hacerme feliz.",
+"A veces quisiera que el tiempo pasara más rápido para poder verte.",
+"Me encanta cuando eres tú sin preocuparte por nada más.",
+"Quiero que algún día puedas mirar atrás y sentirte orgullosa de todo lo que has logrado.",
+"Me haces querer guardar hasta los mensajes más insignificantes.",
+"No sabes cuánto quisiera estar ahí cuando necesites un abrazo.",
+"Me gusta pensar que, aunque estemos lejos, estamos compartiendo la misma historia.",
+"Quiero que también tengas momentos bonitos contigo misma, porque te los mereces muchísimo.",
+"Me encanta que seas parte de mis pensamientos más bonitos.",
+"Si algún día dudas de ti, quisiera recordarte todas esas cositas que te hacen tan especial.",
+"Me gusta quererte sin necesidad de que cada día sea perfecto.",
+"Quiero seguir conociendo esa versión de ti que va cambiando con los años.",
+"Me emociona pensar que todavía nos quedan muchísimas cosas por vivir.",
+"No sabes lo feliz que me hace poder decir que eres mi novia.",
+"Ojalá pronto pueda decirte todo esto mientras te abrazo.",
+"Te amo, y no sabes cuánto me alegra que entre tantas personas seas tú con quien estoy compartiendo todo esto."
+];
+
+// =====================================================
+//  MOTOR
+// =====================================================
+const NUM_PARTICULAS = 24000;
+const SX = 1, SZ = 1, ROT0 = 0, TORSION = 0;   // forma ovalada y torcida
+function elip(R, a) {
+  const x0 = R * Math.cos(a) * SX, z0 = R * Math.sin(a) * SZ;
+  const p = ROT0 + TORSION * (R - 45), c = Math.cos(p), s = Math.sin(p);
+  return [x0 * c - z0 * s, x0 * s + z0 * c];
+}
+const RADIO_AGUJERO = 38;
+const ALTURA_CORAZON = 255;
+const TAM_CORAZON = 112;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1, F = 700;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  F = Math.min(W * 0.95, H * 1.1) * 1.05;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function gauss() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ---------- paleta rosa ----------
+const NC = 24;
+const PARADAS = [[0, 185, 140, 235], [0.35, 215, 150, 230], [0.7, 245, 185, 215], [1, 255, 232, 240]];
+function colorT(t) {
+  for (let i = 0; i < PARADAS.length - 1; i++) {
+    const a = PARADAS[i], b = PARADAS[i + 1];
+    if (t <= b[0]) { const u = (t - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u]; }
+  }
+  return [255, 225, 240];
+}
+const colores = [];
+for (let i = 0; i < NC; i++) colores.push(colorT(i / (NC - 1)).map(Math.round));
+
+function crearSprite(r, g, b) {
+  const s = document.createElement('canvas'); s.width = s.height = 48;
+  const x = s.getContext('2d');
+  const gr = x.createRadialGradient(24, 24, 0, 24, 24, 24);
+  gr.addColorStop(0, 'rgba(255,255,255,0.95)');
+  gr.addColorStop(0.18, 'rgba(' + r + ',' + g + ',' + b + ',0.85)');
+  gr.addColorStop(0.55, 'rgba(' + r + ',' + g + ',' + b + ',0.22)');
+  gr.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 48, 48);
+  return s;
+}
+const sprites = colores.map(c => crearSprite(c[0], c[1], c[2]));
+const spriteHalo = (function () {
+  const s = document.createElement('canvas'); s.width = s.height = 256;
+  const x = s.getContext('2d');
+  const gr = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(190,150,255,0.5)');
+  gr.addColorStop(0.3, 'rgba(170,120,240,0.25)');
+  gr.addColorStop(0.7, 'rgba(120,80,190,0.07)');
+  gr.addColorStop(1, 'rgba(80,40,140,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 256, 256);
+  return s;
+})();
+
+// ---------- galaxia ----------
+const N = NUM_PARTICULAS;
+const pr = new Float32Array(N), pa = new Float32Array(N), py = new Float32Array(N);
+const pw = new Float32Array(N), ps = new Float32Array(N), pc = new Uint8Array(N);
+const pl = new Float32Array(N), pg = new Uint8Array(N);
+const pcs = new Float32Array(N), psn = new Float32Array(N);
+const sx = new Float32Array(N), sy = new Float32Array(N), sz = new Float32Array(N);
+
+(function () {
+  const tmp = [];
+  let glows = 0;
+  for (let i = 0; i < N; i++) {
+    let r, a, ok = false;
+    while (!ok) {
+      r = RADIO_AGUJERO + 8 + Math.pow(Math.random(), 1.45) * 560;
+      a = Math.random() * Math.PI * 2;
+      const phi = a - 2.1 * Math.log(r / 45);
+      const dens = 0.08 + 0.92 * Math.pow(0.5 + 0.5 * Math.cos(2 * phi), 2.5);
+      ok = Math.random() < dens;
+    }
+    const t = clamp((r - 45) / 480, 0, 1);
+    const glow = (r < 150 && Math.random() < 0.22 && glows < 2600) ? 1 : 0;
+    if (glow) glows++;
+    tmp.push({
+      r, a,
+      y: gauss() * (1.5 + r * 0.022),
+      w: 1.2 * Math.pow(60 / r, 0.85),
+      s: Math.random() < 0.1 ? 2 : 1,
+      c: clamp(Math.round(t * (NC - 1) + gauss() * 2), 0, NC - 1),
+      l: (0.5 + Math.random() * 0.5) * Math.pow(clamp(1 - (r - 45) / 560, 0.04, 1), 1.35),
+      g: glow
+    });
+  }
+  tmp.sort((p, q) => p.c - q.c);
+  tmp.forEach((p, i) => { pr[i] = p.r; pa[i] = p.a; py[i] = p.y; pw[i] = p.w; ps[i] = p.s; pc[i] = p.c; pl[i] = p.l; pg[i] = p.g; const ang = ROT0 + TORSION * (p.r - 45); pcs[i] = Math.cos(ang); psn[i] = Math.sin(ang); });
+})();
+
+// ---------- corazón de partículas ----------
+const HN_BORDE = 950, HN_RELLENO = 3200;
+const hx = new Float32Array(HN_BORDE + HN_RELLENO), hy = new Float32Array(HN_BORDE + HN_RELLENO), hz = new Float32Array(HN_BORDE + HN_RELLENO);
+const hb = new Uint8Array(HN_BORDE + HN_RELLENO), hc = new Uint8Array(HN_BORDE + HN_RELLENO);
+const hsx = new Float32Array(HN_BORDE + HN_RELLENO), hsy = new Float32Array(HN_BORDE + HN_RELLENO);
+(function () {
+  function punto(t) {
+    return [16 * Math.pow(Math.sin(t), 3) / 17,
+      (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 17];
+  }
+  for (let i = 0; i < HN_BORDE; i++) {
+    const p = punto(Math.random() * Math.PI * 2);
+    hx[i] = (p[0] + gauss() * 0.012) * TAM_CORAZON;
+    hy[i] = (p[1] + gauss() * 0.012) * TAM_CORAZON;
+    hz[i] = gauss() * 5;
+    hb[i] = 1; hc[i] = 17 + ((Math.random() * 7) | 0);
+  }
+  for (let i = HN_BORDE; i < HN_BORDE + HN_RELLENO; i++) {
+    const p = punto(Math.random() * Math.PI * 2);
+    const s = Math.sqrt(Math.random());
+    hx[i] = p[0] * s * TAM_CORAZON * 0.97;
+    hy[i] = p[1] * s * TAM_CORAZON * 0.97;
+    hz[i] = gauss() * 14;
+    hb[i] = 0; hc[i] = 2 + ((Math.random() * 9) | 0);
+  }
+})();
+
+// ---------- corazoncitos flotantes ----------
+const NH = 34;
+const flot = [];
+for (let i = 0; i < NH; i++) {
+  flot.push({
+    r: 170 + Math.random() * 900, a: Math.random() * Math.PI * 2,
+    y: -10 + Math.random() * 230, w: (Math.random() < 0.5 ? 1 : -1) * (0.05 + Math.random() * 0.1),
+    fase: Math.random() * 10, tam: 9 + Math.random() * 9, ton: Math.random()
+  });
+}
+function dibujarCorazon(x, y, s) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.9);
+  ctx.bezierCurveTo(x - s * 1.4, y - s * 0.1, x - s * 0.7, y - s * 1.2, x, y - s * 0.4);
+  ctx.bezierCurveTo(x + s * 0.7, y - s * 1.2, x + s * 1.4, y - s * 0.1, x, y + s * 0.9);
+  ctx.fill();
+}
+
+// ---------- estrellas de fondo ----------
+const estrellas = [];
+for (let i = 0; i < 300; i++) estrellas.push({ x: Math.random(), y: Math.random(), a: 0.1 + Math.random() * 0.4, f: Math.random() * 6, p: Math.random() < 0.25 });
+
+// ---------- fondo profundo ----------
+const mundo = [], neb = [];
+for (let i = 0; i < 1300; i++) {
+  const u = Math.random() * 2 - 1, th = Math.random() * 6.283, q = Math.sqrt(1 - u * u), r = 1800 + Math.random() * 4200;
+  mundo.push([r * q * Math.cos(th), r * u * 0.8, r * q * Math.sin(th), 0.25 + Math.random() * 0.6, Math.random() * 6,
+    ['#e8dcff', '#ffe3ee', '#d6e6ff', '#fff1de'][i % 4], Math.random() < 0.15 ? 2 : 1.2]);
+}
+for (let i = 0; i < 9; i++) {
+  const th = Math.random() * 6.283, r = 2400 + Math.random() * 2400;
+  neb.push([r * Math.cos(th), (Math.random() - 0.5) * 1800, r * Math.sin(th), 1800 + Math.random() * 1800, [2, 10, 18, 5, 14][i % 5]]);
+}
+
+// ---------- texto en anillo ----------
+const medidor = document.createElement('canvas').getContext('2d');
+const TAM_LETRA = 24;
+function construirAnillo(texto, R) {
+  medidor.font = 'bold ' + TAM_LETRA + 'px Georgia, serif';
+  const letras = [...texto];
+  const anchos = letras.map(ch => medidor.measureText(ch).width + 3);
+  const total = anchos.reduce((s, v) => s + v, 0);
+  const rep = Math.max(1, Math.floor((2 * Math.PI * R * 1.07) / total));
+  const k = (2 * Math.PI) / (rep * total);   // ajusta para que dé la vuelta exacta
+  const res = [];
+  let acc = 0;
+  for (let r = 0; r < rep; r++) {
+    for (let i = 0; i < letras.length; i++) {
+      res.push({ c: letras[i], a: (acc + anchos[i] / 2) * k });
+      acc += anchos[i];
+    }
+  }
+  return res;
+}
+const anillos = [];   // sin anillos de letras: el universo queda abierto
+
+// ---------- mensajes dispersos ----------
+const FRASES = MENSAJES.concat(TEXTO_ANILLO_1.split('♥'), TEXTO_ANILLO_2.split('♥')).map(t => t.trim()).filter(Boolean);
+const textos = [];
+(function () {
+  const n = FRASES.length;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const orden = FRASES.map((m, i) => i).sort(() => Math.random() - 0.5);
+  for (let i = 0; i < n; i++) {
+    const k = (i + 0.5) / n;
+    const radio = 860 + Math.sqrt(k) * 780 + Math.random() * 100;
+    textos.push({
+      txt: FRASES[orden[i]],
+      r: radio, a: i * golden * 2.3 + Math.random() * 0.4,
+      y: (Math.random() - 0.3) * (260 + radio * 0.3),
+      w: 0.05 * Math.pow(860 / radio, 0.6),
+      fase: Math.random() * 10, vel: 0.6 + Math.random() * 0.8, bob: 8 + Math.random() * 14,
+      ciclo: 36 + Math.random() * 14, off: Math.random() * 60
+    });
+  }
+})();
+
+// ---------- cámara ----------
+let yaw = 0.4, pitch = 0.3, dist = 4200;
+let tPitch = 0.3, tDist = 4200;
+let arrastrando = false, ultimoInteraccion = -999, ultimoX = 0, ultimoY = 0;
+let entrado = false, velZoom = 1.1;
+const punteros = new Map();
+let iniX = 0, iniY = 0;
+const corazonesTap = [], fugaces = [];
+let pinchPrev = 0;
+
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  arrastrando = true; ultimoX = e.clientX; ultimoY = e.clientY; iniX = e.clientX; iniY = e.clientY;
+  if (punteros.size === 2) { const [p, q] = [...punteros.values()]; pinchPrev = Math.hypot(p.x - q.x, p.y - q.y); }
+});
+canvas.addEventListener('pointermove', e => {
+  if (!punteros.has(e.pointerId)) return;
+  punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (punteros.size === 2) {
+    const [p, q] = [...punteros.values()];
+    const d = Math.hypot(p.x - q.x, p.y - q.y);
+    tDist = clamp(tDist * (pinchPrev / d), 500, 4600); pinchPrev = d;
+  } else if (arrastrando) {
+    yaw += (e.clientX - ultimoX) * 0.006;
+    pitch = clamp(pitch + (e.clientY - ultimoY) * 0.005, 0.05, 1.4);
+    tPitch = pitch; ultimoX = e.clientX; ultimoY = e.clientY;
+  }
+  ultimoInteraccion = performance.now() / 1000;
+});
+const soltar = e => {
+  if (e.type === 'pointerup' && Math.hypot(e.clientX - iniX, e.clientY - iniY) < 8)
+    for (let i = 0; i < 7; i++) corazonesTap.push({ x: e.clientX, y: e.clientY, vx: (Math.random() - .5) * 90, vy: -40 - Math.random() * 90, v: 0, t: 5 + Math.random() * 7 });
+  punteros.delete(e.pointerId); if (punteros.size === 0) arrastrando = false; };
+canvas.addEventListener('pointerup', soltar);
+canvas.addEventListener('pointercancel', soltar);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  tDist = clamp(tDist * (1 + e.deltaY * 0.001), 500, 4600);
+  ultimoInteraccion = performance.now() / 1000;
+}, { passive: false });
+
+// ---------- intro, música, fotos, contador ----------
+document.getElementById('sub').textContent = 'Feliz 2 meses, ' + (NOMBRE ? NOMBRE : 'mi vida');
+const pie = document.getElementById('pie');
+const cMes = document.getElementById('cMes'), cDia = document.getElementById('cDia'), cHor = document.getElementById('cHor'),
+      cMin = document.getElementById('cMin'), cSeg = document.getElementById('cSeg');
+const dos = n => (n < 10 ? '0' : '') + n;
+function actualizarContador() {
+  const ini = new Date(FECHA_INICIO).getTime();
+  if (isNaN(ini)) return;
+  const off = ZONA_HORARIA * 3600000;
+  const a = new Date(ini + off), b = new Date(Date.now() + off);
+  if (b.getTime() < a.getTime()) return;
+  let meses = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  const ancla = m => Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + m, a.getUTCDate(), a.getUTCHours(), a.getUTCMinutes(), a.getUTCSeconds());
+  if (ancla(meses) > b.getTime()) meses--;
+  let resto = Math.floor((b.getTime() - ancla(meses)) / 1000);
+  const dias = Math.floor(resto / 86400); resto %= 86400;
+  const horas = Math.floor(resto / 3600); resto %= 3600;
+  const mins = Math.floor(resto / 60), segs = resto % 60;
+  cMes.textContent = meses; cDia.textContent = dias;
+  cHor.textContent = dos(horas); cMin.textContent = dos(mins); cSeg.textContent = dos(segs);
+}
+actualizarContador(); setInterval(actualizarContador, 1000);
+
+const enlaceCancion = document.getElementById('enlaceCancion');
+if (!MUSICA && ENLACE_CANCION) enlaceCancion.href = ENLACE_CANCION;
+
+let audio = null;
+const btnMusica = document.getElementById('musica');
+if (MUSICA) {
+  audio = new Audio(MUSICA); audio.loop = true; audio.volume = 0.7;
+  btnMusica.style.display = 'block';
+  btnMusica.onclick = () => { if (audio.paused) { audio.play().catch(() => {}); btnMusica.style.opacity = 1; } else { audio.pause(); btnMusica.style.opacity = .5; } };
+}
+
+const cajaPreg = document.getElementById('pregunta'), noB = document.getElementById('no');
+function huir() { noB.style.transform = 'translate(' + ((Math.random() - .5) * 150) + 'px,' + ((Math.random() - .5) * 90) + 'px)'; }
+noB.addEventListener('mouseenter', huir); noB.addEventListener('touchstart', e => { e.preventDefault(); huir(); }, { passive: false }); noB.addEventListener('click', huir);
+document.getElementById('si').addEventListener('click', () => {
+  document.getElementById('resp').textContent = 'Yo también te elijo, siempre ♥';
+  document.querySelector('.pb').style.display = 'none';
+  setTimeout(() => cajaPreg.classList.remove('ver'), 4500);
+});
+const cajaFoto = document.getElementById('foto');
+let idxFoto = 0;
+function ciclarFotos() {
+  if (!FOTOS.length || !entrado) return;
+  const src = FOTOS[idxFoto++ % FOTOS.length];
+  const img = cajaFoto.querySelector('img');
+  img.onerror = () => { img.style.display = 'none'; };
+  img.onload = () => { img.style.display = 'block'; };
+  img.src = src;
+  cajaFoto.querySelector('div').textContent = MENSAJES[(Math.random() * MENSAJES.length) | 0];
+  cajaFoto.classList.add('ver');
+  setTimeout(() => cajaFoto.classList.remove('ver'), 8000);
+}
+setInterval(ciclarFotos, 16000);
+
+document.getElementById('entrar').addEventListener('click', () => {
+  entrado = true;
+  document.getElementById('intro').classList.add('fuera');
+  document.getElementById('hud').classList.add('ver');
+  pie.classList.add('ver');
+  if (!MUSICA && ENLACE_CANCION) enlaceCancion.style.display = 'flex';
+  if (audio) audio.play().catch(() => {});
+  setTimeout(ciclarFotos, 6000);
+  setTimeout(() => cajaPreg.classList.add('ver'), 15000);
+});
+
+// =====================================================
+//  BUCLE
+// =====================================================
+let t0 = performance.now() / 1000, tiempo = 0;
+
+function frame() {
+  const ahora = performance.now() / 1000;
+  const dt = Math.min(ahora - t0, 0.05);
+  t0 = ahora; tiempo += dt;
+
+  if (!arrastrando) yaw += dt * (entrado ? 0.06 : 0.12);
+  const inactivo = ahora - ultimoInteraccion > 3;
+  if (!entrado) { tDist = 4200; }
+  else if (inactivo) {
+    tPitch = 0.3 + Math.sin(tiempo * 0.11) * 0.1;
+    tDist = 1750 + Math.sin(tiempo * 0.08) * 400;
+    pitch += (tPitch - pitch) * Math.min(1, dt * 0.8);
+  }
+  if (entrado && dist > 2600 && inactivo) tDist = 1750;
+  dist += (tDist - dist) * Math.min(1, dt * (entrado ? velZoom : 2.5));
+
+  const cx = W / 2, cy = H * 0.6;
+  const cY = Math.cos(yaw), sY = Math.sin(yaw);
+  const cP = Math.cos(pitch), sP = Math.sin(pitch);
+
+  function proy(x, y, z) {
+    const x1 = x * cY + z * sY;
+    const z1 = -x * sY + z * cY;
+    const y2 = y * cP + z1 * sP;
+    const cz = dist + z1 * cP - y * sP;
+    const k = F / cz;
+    return [cx + x1 * k, cy - y2 * k, cz, k];
+  }
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  for (const s of estrellas) {
+    const a = s.a * (0.7 + 0.3 * Math.sin(tiempo * 1.2 + s.f));
+    ctx.fillStyle = s.p ? 'rgba(230,200,255,' + a.toFixed(3) + ')' : 'rgba(215,200,255,' + a.toFixed(3) + ')';
+    ctx.fillRect(s.x * W, s.y * H, 1.2, 1.2);
+  }
+
+  ctx.globalCompositeOperation = 'lighter';
+  for (const n of neb) {
+    const p = proy(n[0], n[1], n[2]); if (p[2] < 300) continue;
+    const sz2 = n[3] * p[3];
+    if (p[0] < -sz2 || p[0] > W + sz2 || p[1] < -sz2 || p[1] > H + sz2) continue;
+    ctx.globalAlpha = 0.16; ctx.drawImage(sprites[n[4]], p[0] - sz2 / 2, p[1] - sz2 / 2, sz2, sz2);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  for (const st of mundo) {
+    const p = proy(st[0], st[1], st[2]);
+    if (p[2] < 300 || p[0] < 0 || p[1] < 0 || p[0] > W || p[1] > H) continue;
+    ctx.globalAlpha = st[3] * (0.7 + 0.3 * Math.sin(tiempo * 1.3 + st[4]));
+    ctx.fillStyle = st[5]; ctx.fillRect(p[0], p[1], st[6], st[6]);
+  }
+  ctx.globalAlpha = 1;
+
+  // proyectar galaxia
+  for (let i = 0; i < N; i++) {
+    pa[i] += pw[i] * dt;
+    const x0 = pr[i] * Math.cos(pa[i]) * SX, z0 = pr[i] * Math.sin(pa[i]) * SZ;
+    const x = x0 * pcs[i] - z0 * psn[i], z = x0 * psn[i] + z0 * pcs[i];
+    const x1 = x * cY + z * sY;
+    const z1 = -x * sY + z * cY;
+    const y2 = py[i] * cP + z1 * sP;
+    const cz = dist + z1 * cP - py[i] * sP;
+    const k = F / cz;
+    sx[i] = cx + x1 * k; sy[i] = cy - y2 * k; sz[i] = cz;
+  }
+  const centro = proy(0, 0, 0);
+  const kc = centro[3];
+  const latido = Math.pow(Math.max(0, Math.sin(tiempo * 3.3)), 6);
+
+  function dibujarParticulas(detras) {
+    ctx.globalCompositeOperation = 'lighter';
+    let cActual = -1;
+    for (let i = 0; i < N; i++) {
+      if ((sz[i] >= dist) !== detras) continue;
+      const x = sx[i], y = sy[i];
+      if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+      const prof = clamp(1.25 - (sz[i] - dist) / 1000, 0.4, 1.25);
+      if (pg[i]) {
+        const s = 14 * kc * (0.8 + 0.4 * pl[i]);
+        ctx.globalAlpha = clamp(0.4 * prof, 0, 1);
+        ctx.drawImage(sprites[pc[i]], x - s / 2, y - s / 2, s, s);
+      } else {
+        if (pc[i] !== cActual) { cActual = pc[i]; const c = colores[cActual]; ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+        ctx.globalAlpha = clamp(pl[i] * prof, 0, 1);
+        const tam = ps[i] * 1.15 * (kc > 0.9 ? 1.4 : 1) * (kc > 1.5 ? 1.3 : 1);
+        ctx.fillRect(x, y, tam, tam);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // anillo del agujero negro
+  const RA = RADIO_AGUJERO * 1.05;
+  const anillo = [];
+  for (let i = 0; i <= 160; i++) {
+    const a = (i % 160) / 160 * Math.PI * 2;
+    anillo.push(proy(RA * Math.cos(a), 0, RA * Math.sin(a)));
+  }
+  function dibujarAnillo(detras) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = detras ? 'rgba(220,205,255,0.5)' : '#ffe3f1';
+    ctx.shadowColor = '#b28cff';
+    ctx.shadowBlur = detras ? 14 : 26;
+    ctx.lineWidth = Math.max(2, 3.4 * kc);
+    ctx.beginPath();
+    let abierto = false;
+    for (let i = 0; i <= 160; i++) {
+      const p = anillo[i];
+      if ((p[2] >= dist) === detras) { if (!abierto) { ctx.moveTo(p[0], p[1]); abierto = true; } else ctx.lineTo(p[0], p[1]); }
+      else abierto = false;
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 1) resplandor del núcleo + parte de atrás
+  ctx.globalCompositeOperation = 'lighter';
+  const hs = 460 * kc * (1 + latido * 0.05);
+  ctx.globalAlpha = 0.75;
+  ctx.drawImage(spriteHalo, centro[0] - hs / 2, centro[1] - hs / 2 * 0.62 - 0 , hs, hs * 0.62);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  dibujarParticulas(true);
+  dibujarAnillo(true);
+
+  // 2) agujero negro (cúpula)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, centro[1] + RA * kc * Math.sin(pitch) + 0.5);
+  ctx.clip();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(centro[0], centro[1], RADIO_AGUJERO * kc, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 3) parte de adelante
+  dibujarParticulas(false);
+  dibujarAnillo(false);
+
+  // 4) anillos de texto sobre el disco
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + TAM_LETRA + 'px Georgia, serif';
+  for (const an of anillos) {
+    an.rot += an.vel * dt;
+    for (const ch of an.letras) {
+      const a = ch.a + an.rot;
+      const e = 10;
+      const P = elip(an.R, a), T = elip(an.R, a + 0.02), I = elip(an.R - 6, a);
+      const X = P[0], Z = P[1];
+      let tx = T[0] - X, tz = T[1] - Z; const tl = Math.hypot(tx, tz) || 1; tx = tx / tl * e; tz = tz / tl * e;
+      let ux = I[0] - X, uz = I[1] - Z; const ul = Math.hypot(ux, uz) || 1; ux = ux / ul * e; uz = uz / ul * e;
+      const p0 = proy(X, an.y, Z);
+      if (p0[2] < 150 || p0[0] < -60 || p0[0] > W + 60 || p0[1] < -60 || p0[1] > H + 60) continue;
+      const p1 = proy(X + tx, an.y, Z + tz);
+      const p2 = proy(X + ux, an.y, Z + uz);
+      const ax = (p1[0] - p0[0]) / e, ay = (p1[1] - p0[1]) / e;
+      const bx = -(p2[0] - p0[0]) / e, by = -(p2[1] - p0[1]) / e;
+      ctx.setTransform(ax * DPR, ay * DPR, bx * DPR, by * DPR, p0[0] * DPR, p0[1] * DPR);
+      const lejos = clamp((p0[2] - (dist - 400)) / 1100, 0, 1);
+      ctx.globalAlpha = 0.95 - lejos * 0.55;
+      ctx.shadowColor = '#b28cff'; ctx.shadowBlur = 8;
+      ctx.fillStyle = '#f1e4ff';
+      ctx.fillText(ch.c, 0, 0);
+    }
+  }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+  // 5) corazón de partículas sobre el agujero negro
+  {
+    const sway = Math.sin(tiempo * 0.5) * 0.45;
+    const rr = -yaw + sway;               // siempre mira hacia la cámara
+    const cr = Math.cos(rr), sr = Math.sin(rr);
+    const esc = 1 + 0.07 * latido + 0.015 * Math.sin(tiempo * 1.7);
+    const flota = ALTURA_CORAZON + Math.sin(tiempo * 0.9) * 10;
+    const cH = proy(0, flota, 0);
+    // halo detrás del corazón
+    ctx.globalCompositeOperation = 'lighter';
+    const hh = TAM_CORAZON * 3.2 * cH[3] * esc;
+    ctx.globalAlpha = 0.35 + 0.25 * latido;
+    ctx.drawImage(spriteHalo, cH[0] - hh / 2, cH[1] - hh / 2, hh, hh);
+    for (let i = 0; i < hx.length; i++) {
+      const lx = hx[i] * esc, ly = hy[i] * esc, lz = hz[i];
+      const wx = lx * cr + lz * sr, wz = -lx * sr + lz * cr;
+      const x1 = wx * cY + wz * sY;
+      const z1 = -wx * sY + wz * cY;
+      const wy = ly + flota;
+      const y2 = wy * cP + z1 * sP;
+      const cz = dist + z1 * cP - wy * sP;
+      const k = F / cz;
+      const X = cx + x1 * k, Y = cy - y2 * k;
+      if (hb[i]) {
+        const s = clamp(11 * k, 4, 18) * (0.85 + 0.3 * Math.sin(tiempo * 4 + i));
+        ctx.globalAlpha = 0.8;
+        ctx.drawImage(sprites[hc[i]], X - s / 2, Y - s / 2, s, s);
+      } else {
+        const c = colores[hc[i]];
+        ctx.globalAlpha = 0.55 + 0.25 * Math.sin(tiempo * 2 + i * 0.37);
+        ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+        const tam = clamp(2.1 * k, 1, 3.2);
+        ctx.fillRect(X, Y, tam, tam);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // 6) corazoncitos flotando
+  {
+    const lista = [];
+    for (const h of flot) {
+      h.a += h.w * dt;
+      const yy = h.y + Math.sin(tiempo * 0.8 + h.fase) * 14;
+      lista.push([proy(h.r * Math.cos(h.a), yy, h.r * Math.sin(h.a)), h]);
+    }
+    lista.sort((u, v) => v[0][2] - u[0][2]);
+    for (const [p, h] of lista) {
+      if (p[2] < 150) continue;
+      const s = h.tam * p[3] * (1 + 0.12 * Math.sin(tiempo * 3 + h.fase));
+      ctx.shadowColor = '#b28cff'; ctx.shadowBlur = 14;
+      ctx.globalAlpha = clamp(1.1 - (p[2] - dist) / 1500, 0.3, 1);
+      ctx.fillStyle = h.ton < 0.5 ? '#f3a6c8' : '#c9a8ff';
+      dibujarCorazon(p[0], p[1], s);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 0.7; ctx.fillStyle = '#fff';
+      ctx.fillRect(p[0] - s * 0.5, p[1] - s * 0.45, Math.max(1, s * 0.22), Math.max(1, s * 0.22));
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+
+  // 7) mensajes dispersos (aparecen y se desvanecen)
+  {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lista = [];
+    for (const m of textos) {
+      m.a += m.w * dt;
+      const bob = Math.sin(tiempo * 0.5 * m.vel + m.fase) * m.bob;
+      const p = proy(m.r * Math.cos(m.a), m.y + bob, m.r * Math.sin(m.a));
+      if (p[2] < 150) continue;
+      lista.push([p, m]);
+    }
+    lista.sort((u, v) => u[0][2] - v[0][2]);
+    const ocupados = [];
+    let visibles = 0;
+    for (const [p, m] of lista) {
+      if (visibles >= 9) break;
+      const fase = ((tiempo + m.off) % m.ciclo) / m.ciclo;
+      const ventana = 0.24;
+      if (fase > ventana) continue;
+      const env = Math.sin((fase / ventana) * Math.PI);
+      const tam = clamp(14 * p[3], 9, 17);
+      const lejos = clamp((p[2] - (dist - 500)) / 1500, 0, 1);
+      const alfa = env * (0.85 - lejos * 0.45);
+      if (alfa < 0.05) continue;
+      ctx.font = 'italic ' + tam.toFixed(1) + 'px Georgia, serif';
+      const ancho = ctx.measureText(m.txt).width;
+      const x0 = p[0] - ancho / 2 - 14, x1 = p[0] + ancho / 2 + 14, y0 = p[1] - tam - 6, y1 = p[1] + tam + 6;
+      if (x1 < 0 || x0 > W || y1 < 0 || y0 > H) continue;
+      let choca = false;
+      for (const o of ocupados) { if (x0 < o[2] && x1 > o[0] && y0 < o[3] && y1 > o[1]) { choca = true; break; } }
+      if (choca) continue;
+      ocupados.push([x0, y0, x1, y1]);
+      visibles++;
+      ctx.shadowColor = 'rgba(170,130,255,' + alfa.toFixed(3) + ')';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = 'rgba(255,232,243,' + alfa.toFixed(3) + ')';
+      ctx.fillText(m.txt, p[0], p[1]);
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // 8) estrellas fugaces y corazoncitos al tocar
+  ctx.shadowBlur = 0;
+  if (entrado && Math.random() < dt * 0.3) {
+    const d = Math.random() < 0.5 ? 1 : -1;
+    fugaces.push({ x: d > 0 ? Math.random() * W * 0.6 : W - Math.random() * W * 0.6, y: Math.random() * H * 0.45, vx: d * (380 + Math.random() * 260), vy: 160 + Math.random() * 120, v: 0 });
+  }
+  for (let i = fugaces.length - 1; i >= 0; i--) {
+    const f = fugaces[i]; f.v += dt; f.x += f.vx * dt; f.y += f.vy * dt;
+    const a = clamp(1 - f.v / 1.4, 0, 1);
+    if (a <= 0) { fugaces.splice(i, 1); continue; }
+    for (let k = 0; k < 14; k++) {
+      ctx.globalAlpha = a * (1 - k / 14) * 0.85;
+      ctx.fillStyle = k < 2 ? '#fff' : '#e4d6ff';
+      const z = 2.6 - k * 0.14;
+      ctx.fillRect(f.x - f.vx * 0.012 * k, f.y - f.vy * 0.012 * k, z, z);
+    }
+  }
+  for (let i = corazonesTap.length - 1; i >= 0; i--) {
+    const h = corazonesTap[i]; h.v += dt; h.x += h.vx * dt; h.y += h.vy * dt; h.vy -= 10 * dt;
+    const a = clamp(1 - h.v / 2.6, 0, 1);
+    if (a <= 0) { corazonesTap.splice(i, 1); continue; }
+    ctx.globalAlpha = a; ctx.fillStyle = i % 2 ? '#f3b6d6' : '#d4bfff';
+    dibujarCorazon(h.x, h.y, h.t * (0.8 + h.v * 0.1));
+  }
+  ctx.globalAlpha = 1;
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
